@@ -8,7 +8,14 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "yes (>=0.0.1,<0.0.2)"
+    "yes (>=0.0.1,<0.0.2)",
+    "pandas (>=2.2.3,<3.0.0)",
+    "optuna (>=4.2.1,<5.0.0)",
+    "scikit-learn (>=1.6.1,<2.0.0)",
+    "xgboost (>=3.0.0,<4.0.0)",
+    "matplotlib (>=3.10.1,<4.0.0)",
+    "ipython (>=9.0.2,<10.0.0)",
+    "numpy (>=2.2.4,<3.0.0)"
 ]
 
 
