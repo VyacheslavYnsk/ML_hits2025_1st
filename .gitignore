@@ -1,0 +1,19 @@
+# виртуальные окружения
+venv/
+.venv/
+env/
+.env/
+
+#  файлы данных 
+data/
+*.csv
+*.log
+
+# Игнорировать скрытые файлы
+.cache/
+.pytest_cache/
+
+# Poetry файлы
+poetry.lock
+pyproject.toml
+
