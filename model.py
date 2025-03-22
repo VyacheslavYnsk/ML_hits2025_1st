@@ -1,12 +1,14 @@
 import os
 import pandas as pd
 pd.set_option('future.no_silent_downcasting', True)
+
 from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score, accuracy_score
 from sklearn.preprocessing import StandardScaler
 import joblib
+import argparse
 
 class My_Classifier_Model:
 
@@ -138,16 +140,34 @@ class My_Classifier_Model:
         else:
             predictions = self.model.predict(X)
 
-        results_path = os.path.join(self.results_dir, "/Users/vaceslav/Documents/GitHub/ML_hits2025_1st/data/results.csv")
-
+        results_path = os.path.join(self.results_dir, "predictions.csv")
         pd.DataFrame({'predictions': predictions}).to_csv(results_path, index=False)
 
         print(f"Predictions saved to {results_path}")
 
+def main():
+    
+    parser = argparse.ArgumentParser(description="Train or predict using My_Classifier_Model.")
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    train_parser = subparsers.add_parser("train", help="Train the model")
+    train_parser.add_argument("--dataset", type=str, required=True, help="Path to the training dataset")
+    train_parser.add_argument("--model_type", type=str, default="xgboost", help="Type of model to train (xgboost or logistic_regression)")
+
+    predict_parser = subparsers.add_parser("predict", help="Make predictions")
+    predict_parser.add_argument("--dataset", type=str, required=True, help="Path to the evaluation dataset")
+    predict_parser.add_argument("--model_type", type=str, default="xgboost", help="Type of model to use for predictions (xgboost or logistic_regression)")
+
+    args = parser.parse_args()
+
+    model = My_Classifier_Model(model_type=args.model_type)
+
+    if args.command == "train":
+        model.train(args.dataset)
+    elif args.command == "predict":
+        model.predict(args.dataset)
+    else:
+        parser.print_help()
+
 if __name__ == "__main__":
-
-    model = My_Classifier_Model(model_type='xgboost')
-
-    model.train("/Users/vaceslav/Documents/GitHub/ML_hits2025_1st/data/tsumladvanced2025/train.csv")
-
-    model.predict("/Users/vaceslav/Documents/GitHub/ML_hits2025_1st/data/tsumladvanced2025/test.csv")
+    main()
