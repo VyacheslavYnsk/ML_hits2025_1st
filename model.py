@@ -9,11 +9,28 @@ from sklearn.metrics import roc_auc_score, accuracy_score
 from sklearn.preprocessing import StandardScaler
 import joblib
 import argparse
+import logging
+from datetime import datetime
+
+def setup_logger():
+
+    os.makedirs("data", exist_ok=True)
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler("data/log_file.log"),  
+            logging.StreamHandler()  
+        ]
+    )
+    return logging.getLogger()
+
+logger = setup_logger()
 
 class My_Classifier_Model:
 
     def __init__(self, model_type='xgboost', model_dir='models', results_dir='results'):
-        
         self.model_type = model_type
         self.model_dir = model_dir
         self.results_dir = results_dir
@@ -21,9 +38,11 @@ class My_Classifier_Model:
 
         os.makedirs(self.model_dir, exist_ok=True)
         os.makedirs(self.results_dir, exist_ok=True)
+        logger.info(f"Initialized model with type: {model_type}")
 
     @staticmethod
     def remove_Nan_data(data):
+        logger.info("Handling missing values...")
         numeric_data = data.select_dtypes(["int", "float"]).columns
         categorical_data = data.select_dtypes(exclude=["int", "float"]).columns
 
@@ -38,6 +57,7 @@ class My_Classifier_Model:
 
     @staticmethod
     def Data_transform(data):
+        logger.info("Transforming data...")
         cabin_data = data["Cabin"].str.split("/", expand=True)
         cabin_data.columns = ["Deck", "Num", "Side"]
         cabin_data["Num"] = cabin_data["Num"].fillna(-1).astype(int)
@@ -63,7 +83,7 @@ class My_Classifier_Model:
         return result
 
     def train_logistic_regression(self, X_train, y_train):
-       
+        logger.info("Training Logistic Regression model...")
         scaler = StandardScaler()
         X_train_scaled = scaler.fit_transform(X_train)
         self.scaler = scaler  
@@ -77,7 +97,7 @@ class My_Classifier_Model:
         self.model.fit(X_train_scaled, y_train)
 
     def train_xgboost(self, X_train, y_train):
-
+        logger.info("Training XGBoost model...")
         self.model = XGBClassifier(
             booster='dart',
             reg_lambda =0.07286592647123674,
@@ -95,7 +115,7 @@ class My_Classifier_Model:
         self.model.fit(X_train, y_train)
 
     def train(self, data_path):
-
+        logger.info(f"Starting training with dataset: {data_path}")
         data = pd.read_csv(data_path)
         data = self.remove_Nan_data(data)
         
@@ -109,6 +129,7 @@ class My_Classifier_Model:
         elif self.model_type == 'xgboost':
             self.train_xgboost(X_train, y_train)
         else:
+            logger.error(f"Unknown model type: {self.model_type}")
             raise ValueError(f"Unknown model type: {self.model_type}")
 
         y_pred = self.model.predict(X_test)
@@ -118,14 +139,15 @@ class My_Classifier_Model:
         model_path = os.path.join(self.model_dir, "model.pkl")
         joblib.dump(self.model, model_path)
 
-        print(f"Model trained and saved to {model_path}")
-        print(f"Accuracy: {accuracy:.4f}, ROC-AUC: {roc_auc:.4f}")
+        logger.info(f"Model trained and saved to {model_path}")
+        logger.info(f"Accuracy: {accuracy:.4f}, ROC-AUC: {roc_auc:.4f}")
 
     def predict(self, data_path):
-
+        logger.info(f"Starting predictions with dataset: {data_path}")
         model_path = os.path.join(self.model_dir, "model.pkl")
 
         if not os.path.exists(model_path):
+            logger.error(f"Model not found at {model_path}. Train the model first.")
             raise FileNotFoundError(f"Model not found at {model_path}. Train the model first.")
 
         self.model = joblib.load(model_path)
@@ -151,11 +173,9 @@ class My_Classifier_Model:
         results_path = os.path.join(self.results_dir, "predictions.csv")
         results_df.to_csv(results_path, index=False)
 
-
-        print(f"Predictions saved to {results_path}")
+        logger.info(f"Predictions saved to {results_path}")
 
 def main():
-
     parser = argparse.ArgumentParser(description="Train or predict using My_Classifier_Model.")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
