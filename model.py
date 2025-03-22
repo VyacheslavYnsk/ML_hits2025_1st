@@ -133,6 +133,7 @@ class My_Classifier_Model:
         data = pd.read_csv(data_path)
         data = self.remove_Nan_data(data)
         X = self.Data_transform(data)
+        PassengerId = data['PassengerId']
 
         if self.model_type == 'logistic_regression':
             X_scaled = self.scaler.transform(X) 
@@ -140,13 +141,21 @@ class My_Classifier_Model:
         else:
             predictions = self.model.predict(X)
 
+        predictions = predictions.astype(bool)
+
+        results_df = pd.DataFrame({
+            'PassengerId': PassengerId,  
+            'Transported': predictions    
+        })
+        
         results_path = os.path.join(self.results_dir, "predictions.csv")
-        pd.DataFrame({'predictions': predictions}).to_csv(results_path, index=False)
+        results_df.to_csv(results_path, index=False)
+
 
         print(f"Predictions saved to {results_path}")
 
 def main():
-    
+
     parser = argparse.ArgumentParser(description="Train or predict using My_Classifier_Model.")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
