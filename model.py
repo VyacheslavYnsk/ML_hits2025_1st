@@ -31,6 +31,7 @@ logger = setup_logger()
 class My_Classifier_Model:
 
     def __init__(self, model_type='xgboost', model_dir='models', results_dir='results'):
+
         self.model_type = model_type
         self.model_dir = model_dir
         self.results_dir = results_dir
@@ -40,11 +41,16 @@ class My_Classifier_Model:
         os.makedirs(self.results_dir, exist_ok=True)
         logger.info(f"Initialized model with type: {model_type}")
 
+    # Заполнение пустых строк
+
     @staticmethod
     def remove_Nan_data(data):
+
         logger.info("Handling missing values...")
-        numeric_data = data.select_dtypes(["int", "float"]).columns
-        categorical_data = data.select_dtypes(exclude=["int", "float"]).columns
+
+        numeric_data = data.select_dtypes(["int", "float"]).columns # Числовые параметры
+
+        categorical_data = data.select_dtypes(exclude=["int", "float"]).columns # категориальные параметры
 
         for col in numeric_data:
             data[col] = data[col].fillna(data[col].median()).infer_objects(copy=False)
@@ -55,13 +61,17 @@ class My_Classifier_Model:
 
         return data
 
+    # Обработка данных
+
     @staticmethod
-    def Data_transform(data):
+    def Data_transform(data): 
+
         logger.info("Transforming data...")
+
         cabin_data = data["Cabin"].str.split("/", expand=True)
         cabin_data.columns = ["Deck", "Num", "Side"]
         cabin_data["Num"] = cabin_data["Num"].fillna(-1).astype(int)
-        cabin_data["Deck"] = cabin_data["Deck"].fillna("Unidentified")
+        cabin_data["Deck"] = cabin_data["Deck"].fillna("Unidentified") 
         cabin_data["Side"] = cabin_data["Side"].fillna("Unidentified")
 
         data["CryoSleep"] = data["CryoSleep"].astype(bool).fillna(False).astype(int)
@@ -74,27 +84,51 @@ class My_Classifier_Model:
             'RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck', "Amount", "Age", "CryoSleep", "VIP"
         ]
 
-        numerics = data.copy()[numeric_columns]
+        numerics = data.copy()[numeric_columns] 
         columns_for_dummies = ["HomePlanet", "Destination"]
+
         dummies = pd.get_dummies(cabin_data[["Deck", "Side"]].join(data.copy()[columns_for_dummies]))
         dummies = dummies.astype(int)
 
         result = pd.concat([numerics, dummies], axis=1)
         return result
 
+    # Логистическая регрессия
+
     def train_logistic_regression(self, X_train, y_train):
+        
         logger.info("Training Logistic Regression model...")
         scaler = StandardScaler()
         X_train_scaled = scaler.fit_transform(X_train)
         self.scaler = scaler  
 
-        self.model = LogisticRegression(
-            C=1.0,  
-            max_iter=1000,
-            random_state=17,
-            n_jobs=-1
-        )
+        best_params = {
+        'C': 1.9139784917677003,
+        'class_weight': 'balanced',
+        'fit_intercept': True,
+        'intercept_scaling': 3.077722358806151,
+        'max_iter': 2204,
+        'solver': 'lbfgs',
+        'tol': 0.002641694010428971,
+        'warm_start': True
+        }
+
+        self.model = LogisticRegression (
+        C=best_params['C'],
+        class_weight=best_params['class_weight'],
+        fit_intercept=best_params['fit_intercept'],
+        intercept_scaling=best_params['intercept_scaling'],
+        max_iter=best_params['max_iter'],
+        solver=best_params['solver'],
+        tol=best_params['tol'],
+        warm_start=best_params['warm_start'],
+        random_state=17,  
+        n_jobs=-1 
+    )
         self.model.fit(X_train_scaled, y_train)
+
+    # XGB
+
 
     def train_xgboost(self, X_train, y_train):
         logger.info("Training XGBoost model...")
@@ -115,6 +149,7 @@ class My_Classifier_Model:
         self.model.fit(X_train, y_train)
 
     def train(self, data_path):
+
         logger.info(f"Starting training with dataset: {data_path}")
         data = pd.read_csv(data_path)
         data = self.remove_Nan_data(data)
@@ -126,8 +161,10 @@ class My_Classifier_Model:
 
         if self.model_type == 'logistic_regression':
             self.train_logistic_regression(X_train, y_train)
+
         elif self.model_type == 'xgboost':
             self.train_xgboost(X_train, y_train)
+
         else:
             logger.error(f"Unknown model type: {self.model_type}")
             raise ValueError(f"Unknown model type: {self.model_type}")
@@ -142,7 +179,9 @@ class My_Classifier_Model:
         logger.info(f"Model trained and saved to {model_path}")
         logger.info(f"Accuracy: {accuracy:.4f}, ROC-AUC: {roc_auc:.4f}")
 
+    
     def predict(self, data_path):
+        
         logger.info(f"Starting predictions with dataset: {data_path}")
         model_path = os.path.join(self.model_dir, "model.pkl")
 
@@ -160,6 +199,7 @@ class My_Classifier_Model:
         if self.model_type == 'logistic_regression':
             X_scaled = self.scaler.transform(X) 
             predictions = self.model.predict(X_scaled)
+
         else:
             predictions = self.model.predict(X)
 
@@ -175,7 +215,10 @@ class My_Classifier_Model:
 
         logger.info(f"Predictions saved to {results_path}")
 
+
+
 def main():
+
     parser = argparse.ArgumentParser(description="Train or predict using My_Classifier_Model.")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
@@ -193,8 +236,10 @@ def main():
 
     if args.command == "train":
         model.train(args.dataset)
+
     elif args.command == "predict":
         model.predict(args.dataset)
+
     else:
         parser.print_help()
 
